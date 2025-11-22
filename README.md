@@ -103,7 +103,7 @@ python -m esptool --port COM4 write_flash 0xE000 otadata_boot_app1.bin
 - [x] Wakeup and deep sleep
 - [x] Read battery percentage
 - [ ] Better rendering with grayscale support
-- [ ] SD card reader
+- [x] SD card reader
 - [ ] WiFi
 - [ ] Bluetooth
 
@@ -136,6 +136,17 @@ The XteinkX4 uses **resistor ladder networks** connected to two ADC pins for but
 
 - GPIO0 is connected to the battery via a voltage divider (2x10K resistors), reading 1/2 of the actual voltage
 - UART0_RXD/GPIO20 can be used to detect USB connection (charging or not)
+
+### microSD (TF) Card
+
+SD SPI bus is shared with EPD, GPIO12 is used for CS (SS).
+
+```
+CS  (SS)    -> IO12
+DO  (MISO)  -> IO7
+DI  (MOSI)  -> IO10
+SCK (SCLK)  -> IO8
+```
 
 ### Implementation Notes
 
