@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include "image.h"
+#include "logo.h"
 #include "BatteryMonitor.h"
-
 
 #define SPI_FQ 40000000
 // Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
@@ -26,9 +26,9 @@
 #define BTN_GPIO3 3 // Power button (digital)
 
 #define UART0_RXD 20 // Used for USB connection detection
-#define BAT_GPIO0 0 // Battery voltage
+#define BAT_GPIO0 0  // Battery voltage
 
-#define SD_SPI_CS   12
+#define SD_SPI_CS 12
 #define SD_SPI_MISO 7
 
 static bool g_sdReady = false;
@@ -52,7 +52,7 @@ volatile DisplayCommand displayCommand = DISPLAY_NONE;
 // GxEPD2 display - Using GxEPD2_426_GDEQ0426T82
 // Note: XteinkX4 has 4.26" 800x480 display
 GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(
-  GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+    GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // FreeRTOS task for non-blocking display updates
 TaskHandle_t displayTaskHandle = NULL;
@@ -85,7 +85,6 @@ volatile Button currentPressedButton = NONE;
 // Power button timing
 const unsigned long POWER_BUTTON_WAKEUP_MS = 1000; // Time required to confirm boot from sleep
 const unsigned long POWER_BUTTON_SLEEP_MS = 1000;  // Time required to enter sleep mode
-
 
 // Get button name as string
 const char *getButtonName(Button btn)
@@ -198,7 +197,7 @@ static void drawSdTopFiles()
   {
     // Render a single line, truncating with ellipsis if needed
     String s(text ? text : "");
-    if ((int) s.length() > maxChars)
+    if ((int)s.length() > maxChars)
     {
       s.remove(maxChars - 1);
       s += "…";
@@ -226,7 +225,8 @@ static void drawSdTopFiles()
   if (!root || !root.isDirectory())
   {
     drawTruncated(0, "No card");
-    if (root) root.close();
+    if (root)
+      root.close();
     return;
   }
 
@@ -335,9 +335,16 @@ void displayUpdateTask(void *parameter)
         {
           display.fillScreen(GxEPD_WHITE);
           // Header font
-          display.setFont(&FreeMonoBold18pt7b);
-          display.setCursor(120, 380);
-          display.print("Sleeping...");
+          // display.setFont(&FreeMonoBold18pt7b);
+          // display.setCursor(120, 380);
+          // display.print("Sleeping...");
+
+          // Draw image at bottom right
+          int16_t imgWidth = 400;
+          int16_t imgHeight = 400;
+          int16_t imgX = 480 - imgWidth - 40;
+          int16_t imgY = 800 - imgHeight - 200;
+          display.drawBitmap(imgX, imgY, logo, imgWidth, imgHeight, GxEPD_BLACK);
         } while (display.nextPage());
       }
     }
@@ -417,7 +424,6 @@ void setup()
     delay(1000);
   }
 
-
   Serial.println("\n=================================");
   Serial.println("  xteink x4 sample");
   Serial.println("=================================");
@@ -430,7 +436,7 @@ void setup()
   pinMode(BTN_GPIO3, INPUT_PULLUP); // Power button
 
   // Initialize SPI with custom pins
-  SPI.begin(EPD_SCLK,SD_SPI_MISO, EPD_MOSI, EPD_CS);
+  SPI.begin(EPD_SCLK, SD_SPI_MISO, EPD_MOSI, EPD_CS);
   // Initialize display
   SPISettings spi_settings(SPI_FQ, MSBFIRST, SPI_MODE0);
   display.init(115200, true, 2, false, SPI, spi_settings);
@@ -451,7 +457,6 @@ void setup()
   display.setTextColor(GxEPD_BLACK);
 
   Serial.println("Display initialized");
-
 
   // Draw initial welcome screen
   currentPressedButton = NONE;
@@ -502,7 +507,6 @@ void debugIO()
   // SD card
 }
 #endif
-
 
 void loop()
 {
