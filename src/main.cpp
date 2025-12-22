@@ -11,21 +11,9 @@
 #include "Lexend_Bold24pt7b.h"
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
+#include "Questions.h"
 
-// Question data structure
-struct Question
-{
-  const char *text;
-  const char *category;
-};
-
-// Sample questions (hardcoded for MVP testing)
-// Now with Czech diacritics support (fonts regenerated with 32-255 range)
-const Question QUESTIONS[] = {
-    {"CO TĚ DNES POTĚŠILO?", "SKRYTÁ ZÁKOUTÍ"},
-    {"Kdy ses naposledy zasmál/a\naž k slzám?", "SKRYTÁ ZÁKOUTÍ"},
-    {"Co tě poslední dobou\npřekvapilo?", "SKRYTÁ ZÁKOUTÍ"}};
-const int QUESTION_COUNT = 3;
+// Current question state
 int currentQuestionIndex = 0;
 
 // Global objects
@@ -112,13 +100,13 @@ void setup()
 
     // Display question text centered in rectangle (50,50,700,320)
     // Rectangle center: (400, 210)
-    const char *questionText = QUESTIONS[currentQuestionIndex].text;
+    const char *questionText = getQuestionText(currentQuestionIndex);
     drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
 
     // Draw category banner at bottom (inverted colors)
     display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
 
-    const char *categoryText = QUESTIONS[currentQuestionIndex].category;
+    const char *categoryText = getQuestionCategory(currentQuestionIndex);
     drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
 
   } while (display.nextPage());
@@ -184,21 +172,21 @@ void loop()
     if (currentButton == RIGHT)
     {
       // Next question
-      currentQuestionIndex = (currentQuestionIndex + 1) % QUESTION_COUNT;
+      currentQuestionIndex = (currentQuestionIndex + 1) % getQuestionCount();
       needsRedraw = true;
       Serial.printf("Next question: %d\n", currentQuestionIndex);
     }
     else if (currentButton == LEFT)
     {
       // Previous question
-      currentQuestionIndex = (currentQuestionIndex - 1 + QUESTION_COUNT) % QUESTION_COUNT;
+      currentQuestionIndex = (currentQuestionIndex - 1 + getQuestionCount()) % getQuestionCount();
       needsRedraw = true;
       Serial.printf("Previous question: %d\n", currentQuestionIndex);
     }
     else if (currentButton == CONFIRM)
     {
       // Random question
-      currentQuestionIndex = random(0, QUESTION_COUNT);
+      currentQuestionIndex = random(0, getQuestionCount());
       needsRedraw = true;
       Serial.printf("Random question: %d\n", currentQuestionIndex);
     }
@@ -220,13 +208,13 @@ void loop()
 
         // Display question centered in rectangle (50,50,700,320)
         // Rectangle center: (400, 210)
-        const char *questionText = QUESTIONS[currentQuestionIndex].text;
+        const char *questionText = getQuestionText(currentQuestionIndex);
         drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
 
         // Draw category banner (inverted)
         display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
 
-        const char *categoryText = QUESTIONS[currentQuestionIndex].category;
+        const char *categoryText = getQuestionCategory(currentQuestionIndex);
         drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
 
       } while (display.nextPage());
