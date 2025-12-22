@@ -253,6 +253,108 @@ inline uint16_t getUtf8LineWidth(const GFXfont *font, const char *str, const cha
 }
 
 /**
+ * Word-wrap UTF-8 text to fit within a maximum width.
+ * Returns number of lines created. Modifies wrappedLines buffer.
+ *
+ * @param font The GFXfont to measure text width
+ * @param str UTF-8 encoded text to wrap
+ * @param maxWidth Maximum pixel width per line
+ * @param wrappedLines Output buffer for wrapped text (must be large enough!)
+ * @param maxLines Maximum number of lines to create
+ * @return Number of lines created
+ */
+inline int wrapUtf8Text(const GFXfont *font, const char *str, uint16_t maxWidth,
+                        char *wrappedLines, int maxLines)
+{
+  if (!font || !str || !wrappedLines || maxLines <= 0)
+    return 0;
+
+  uint16_t fontFirst = pgm_read_word(&font->first);
+  uint16_t fontLast = pgm_read_word(&font->last);
+
+  int lineCount = 0;
+  const char *p = str;
+  char *out = wrappedLines;
+
+  while (*p && lineCount < maxLines)
+  {
+    uint16_t lineWidth = 0;
+    const char *lineStart = p;
+    const char *lastSpace = nullptr;
+    const char *lastSpaceOut = out;
+
+    // Build line until we exceed maxWidth
+    while (*p)
+    {
+      uint16_t codepoint;
+      uint8_t bytes = decodeUtf8Char(p, codepoint);
+
+      // Handle existing newlines
+      if (codepoint == '\n')
+      {
+        *out++ = '\n';
+        p += bytes;
+        break;
+      }
+
+      if (codepoint == '\r')
+      {
+        p += bytes;
+        continue;
+      }
+
+      // Get character width
+      uint16_t charWidth = 0;
+      if (codepoint >= fontFirst && codepoint <= fontLast)
+      {
+        uint16_t glyphIndex = codepoint - fontFirst;
+        GFXglyph *glyph = &(((GFXglyph *)pgm_read_ptr(&font->glyph))[glyphIndex]);
+        charWidth = pgm_read_byte(&glyph->xAdvance);
+      }
+
+      // Check if adding this character would exceed width
+      if (lineWidth + charWidth > maxWidth && lineStart != p)
+      {
+        // Line too long, need to break
+        if (lastSpace != nullptr)
+        {
+          // Break at last space
+          out = (char *)lastSpaceOut;
+          p = lastSpace;
+          // Skip the space
+          uint16_t dummy;
+          p += decodeUtf8Char(p, dummy);
+        }
+        // else: no space found, break at current position (word too long)
+
+        *out++ = '\n';
+        break;
+      }
+
+      // Track spaces for word wrapping
+      if (codepoint == ' ')
+      {
+        lastSpace = p;
+        lastSpaceOut = out;
+      }
+
+      // Copy character bytes to output
+      for (uint8_t i = 0; i < bytes; i++)
+      {
+        *out++ = *p++;
+      }
+
+      lineWidth += charWidth;
+    }
+
+    lineCount++;
+  }
+
+  *out = '\0'; // Null terminate
+  return lineCount;
+}
+
+/**
  * Draw multi-line UTF-8 text centered both horizontally and vertically within a rectangle.
  * Each line is center-aligned.
  *
@@ -353,6 +455,44 @@ inline void drawUtf8MultiLineCentered(Adafruit_GFX &gfx, const GFXfont *font, co
     currentY += yAdvance;
     lineStart = nextLine;
   }
+}
+
+/**
+ * Draw multi-line UTF-8 text with automatic word wrapping to fit within a box.
+ * Text is centered both horizontally and vertically.
+ *
+ * @param gfx The Adafruit_GFX display object
+ * @param font The GFXfont to use
+ * @param str UTF-8 encoded text
+ * @param centerX Center X of the box
+ * @param centerY Center Y of the box
+ * @param maxWidth Maximum width for text (pixels)
+ * @param maxHeight Maximum height for text (pixels)
+ * @param color Text color
+ */
+inline void drawUtf8MultiLineWrapped(Adafruit_GFX &gfx, const GFXfont *font, const char *str,
+                                     int16_t centerX, int16_t centerY,
+                                     uint16_t maxWidth, uint16_t maxHeight, uint16_t color)
+{
+  if (!font || !str || *str == '\0')
+    return;
+
+  // Allocate buffer for wrapped text (max 1000 chars)
+  static char wrappedBuffer[1000];
+
+  // Get font metrics
+  uint8_t yAdvance = pgm_read_byte(&font->yAdvance);
+
+  // Calculate max lines that fit in height
+  int maxLines = maxHeight / yAdvance;
+  if (maxLines < 1)
+    maxLines = 1;
+
+  // Wrap text to fit width
+  int lineCount = wrapUtf8Text(font, str, maxWidth, wrappedBuffer, maxLines);
+
+  // Draw the wrapped text centered
+  drawUtf8MultiLineCentered(gfx, font, wrappedBuffer, centerX, centerY, color);
 }
 
 #endif // UTF8_GFX_HELPER_H

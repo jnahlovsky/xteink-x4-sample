@@ -100,8 +100,9 @@ void setup()
 
     // Display question text centered in rectangle (50,50,700,320)
     // Rectangle center: (400, 210)
+    // Inner box is 700x320, with padding we use 640x280 for text
     const char *questionText = getQuestionText(currentQuestionIndex);
-    drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
+    drawUtf8MultiLineWrapped(display, &Lexend_Light40pt7b, questionText, 400, 210, 640, 280, GxEPD_BLACK);
 
     // Draw category banner at bottom (inverted colors)
     display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
@@ -208,8 +209,9 @@ void loop()
 
         // Display question centered in rectangle (50,50,700,320)
         // Rectangle center: (400, 210)
+        // Inner box is 700x320, with padding we use 640x280 for text
         const char *questionText = getQuestionText(currentQuestionIndex);
-        drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
+        drawUtf8MultiLineWrapped(display, &Lexend_Light40pt7b, questionText, 400, 210, 640, 280, GxEPD_BLACK);
 
         // Draw category banner (inverted)
         display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
