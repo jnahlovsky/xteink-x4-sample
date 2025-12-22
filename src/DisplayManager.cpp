@@ -39,8 +39,8 @@ void DisplayManager::begin()
   SPISettings spi_settings(SPI_FQ, MSBFIRST, SPI_MODE0);
   display.init(115200, true, 2, false, SPI, spi_settings);
 
-  // Setup display properties
-  display.setRotation(3); // 270 degrees
+  // Setup display properties - Try rotation 0 for GDEQ0426T82
+  display.setRotation(0); // No rotation, native landscape
   display.setTextColor(GxEPD_BLACK);
 }
 
@@ -164,35 +164,19 @@ void DisplayManager::updateDisplay()
 
     if (cmd == DISPLAY_INITIAL)
     {
-      // Use full window for initial welcome screen
+      // Use full window for sleep screen with logo only
       display.setFullWindow();
       display.firstPage();
       do
       {
         display.fillScreen(GxEPD_WHITE);
 
-        // Header font
-        display.setFont(&FreeMonoBold18pt7b);
-        display.setCursor(20, 50);
-        display.print("Xteink X4 Sample");
-
-        // Button text with smaller font
-        display.setFont(&FreeMonoBold12pt7b);
-        display.setCursor(20, 100);
-        display.print(getButtonName(currentPressedButton));
-
-        // Draw battery information
-        drawBatteryInfo();
-        // Draw top 3 SD files below the battery block
-        drawSdTopFiles();
-
-        // Draw image at bottom right
-        int16_t imgWidth = 263;
-        int16_t imgHeight = 280;
-        int16_t imgMargin = 20;
-        int16_t imgX = 480 - imgMargin - imgWidth;
-        int16_t imgY = 800 - imgMargin - imgHeight;
-        display.drawBitmap(imgX, imgY, dr_mario, imgWidth, imgHeight, GxEPD_BLACK);
+        // Draw logo image centered
+        int16_t imgWidth = 400;
+        int16_t imgHeight = 400;
+        int16_t imgX = (display.width() - imgWidth) / 2;
+        int16_t imgY = (display.height() - imgHeight) / 2;
+        display.drawBitmap(imgX, imgY, logo, imgWidth, imgHeight, GxEPD_BLACK);
       } while (display.nextPage());
     }
     else if (cmd == DISPLAY_TEXT)

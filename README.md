@@ -52,12 +52,12 @@ Before flashing custom firmware, back up the factory firmware:
 
 ```powershell
 # Read entire 16MB flash
-python -m esptool --chip esp32c3 --port COM4 read_flash 0x0 0x1000000 firmware_backup.bin
+python -m esptool --chip esp32c3 --port COM6 read_flash 0x0 0x1000000 firmware_backup.bin
 ```
 
 ```powershell
 # Read only app0 (faster)
-python -m esptool --chip esp32c3 --port COM4 read_flash 0x10000 0x640000 app0_backup.bin
+python -m esptool --chip esp32c3 --port COM6 read_flash 0x10000 0x640000 app0_backup.bin
 ```
 
 ### Restore Original Firmware
@@ -66,12 +66,12 @@ To restore the backed-up firmware:
 
 ```powershell
 # Write back the entire flash
-python -m esptool --chip esp32c3 --port COM4 write_flash 0x0 firmware_backup.bin
+python -m esptool --chip esp32c3 --port COM6 write_flash 0x0 firmware_backup.bin
 ```
 
 ```powershell
 # Write back only app0 (faster)
-python -m esptool --chip esp32c3 --port COM4 write_flash 0x10000 app0_backup.bin
+python -m esptool --chip esp32c3 --port COM6 write_flash 0x10000 app0_backup.bin
 ```
 
 **Important**: Make sure to use the correct COM port for your device.
@@ -80,14 +80,14 @@ python -m esptool --chip esp32c3 --port COM4 write_flash 0x10000 app0_backup.bin
 
 ```powershell
 # Backup current OTA data first
-python -m esptool --port COM4 read_flash 0xE000 0x2000 otadata_backup.bin
+python -m esptool --port COM6 read_flash 0xE000 0x2000 otadata_backup.bin
 
 # Flash to switch boot partition
 # Boot app0
-python -m esptool --port COM4 write_flash 0xE000 otadata_boot_app0.bin
+python -m esptool --port COM6 write_flash 0xE000 otadata_boot_app0.bin
 
 # Boot app1
-python -m esptool --port COM4 write_flash 0xE000 otadata_boot_app1.bin
+python -m esptool --port COM6 write_flash 0xE000 otadata_boot_app1.bin
 ```
 
 ## Notes

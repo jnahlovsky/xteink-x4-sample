@@ -8,6 +8,25 @@
 #include "DisplayManager.h"
 #include "PowerManager.h"
 #include "SDCardManager.h"
+#include "Lexend_Bold24pt7b.h"
+#include "Lexend_Light40pt7b.h"
+#include "Utf8GfxHelper.h"
+
+// Question data structure
+struct Question
+{
+  const char *text;
+  const char *category;
+};
+
+// Sample questions (hardcoded for MVP testing)
+// Now with Czech diacritics support (fonts regenerated with 32-255 range)
+const Question QUESTIONS[] = {
+    {"CO TĚ DNES POTĚŠILO?", "SKRYTÁ ZÁKOUTÍ"},
+    {"Kdy ses naposledy zasmál/a\naž k slzám?", "SKRYTÁ ZÁKOUTÍ"},
+    {"Co tě poslední dobou\npřekvapilo?", "SKRYTÁ ZÁKOUTÍ"}};
+const int QUESTION_COUNT = 3;
+int currentQuestionIndex = 0;
 
 // Global objects
 static BatteryMonitor g_battery(BAT_GPIO0);
@@ -65,6 +84,9 @@ void setup()
   g_displayManager.setBatteryMonitor(&g_battery);
   Serial.println("Display initialized");
 
+  // Ensure landscape orientation (rotation already set in DisplayManager)
+  Serial.printf("Display size: %d x %d\n", display.width(), display.height());
+
   // SD Card Initialization
   if (g_sdManager.begin())
   {
@@ -75,13 +97,40 @@ void setup()
     Serial.println("\n SD card not detected");
   }
 
-  // Draw initial welcome screen
+  // Draw initial question screen
+  display.setFullWindow();
+  display.firstPage();
+  do
+  {
+    display.fillScreen(GxEPD_WHITE);
+
+    // Draw inner rounded rectangle for question area (3px thick border)
+    for (int i = 0; i < 3; i++)
+    {
+      display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
+    }
+
+    // Display question text centered in rectangle (50,50,700,320)
+    // Rectangle center: (400, 210)
+    const char *questionText = QUESTIONS[currentQuestionIndex].text;
+    drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
+
+    // Draw category banner at bottom (inverted colors)
+    display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
+
+    const char *categoryText = QUESTIONS[currentQuestionIndex].category;
+    drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
+
+  } while (display.nextPage());
+  display.hibernate();
+  Serial.println("Question displayed");
+
+  // Start display task for sleep screen with logo
   g_displayManager.setCurrentButton(NONE);
   g_displayManager.setDisplayCommand(DISPLAY_INITIAL);
-
-  // Start display update task on core 0
   g_displayManager.startDisplayTask();
   Serial.println("Display task created");
+
   Serial.println("Setup complete!\n");
 }
 
@@ -129,8 +178,64 @@ void loop()
     Serial.print("Button: ");
     Serial.println(g_buttonHandler.getButtonName(currentButton));
 
-    g_displayManager.setCurrentButton(currentButton);
-    g_displayManager.setDisplayCommand(DISPLAY_TEXT);
+    // Handle navigation
+    bool needsRedraw = false;
+
+    if (currentButton == RIGHT)
+    {
+      // Next question
+      currentQuestionIndex = (currentQuestionIndex + 1) % QUESTION_COUNT;
+      needsRedraw = true;
+      Serial.printf("Next question: %d\n", currentQuestionIndex);
+    }
+    else if (currentButton == LEFT)
+    {
+      // Previous question
+      currentQuestionIndex = (currentQuestionIndex - 1 + QUESTION_COUNT) % QUESTION_COUNT;
+      needsRedraw = true;
+      Serial.printf("Previous question: %d\n", currentQuestionIndex);
+    }
+    else if (currentButton == CONFIRM)
+    {
+      // Random question
+      currentQuestionIndex = random(0, QUESTION_COUNT);
+      needsRedraw = true;
+      Serial.printf("Random question: %d\n", currentQuestionIndex);
+    }
+
+    // Redraw display if needed
+    if (needsRedraw)
+    {
+      display.setFullWindow();
+      display.firstPage();
+      do
+      {
+        display.fillScreen(GxEPD_WHITE);
+
+        // Draw rounded rectangle border (3px thick)
+        for (int i = 0; i < 3; i++)
+        {
+          display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
+        }
+
+        // Display question centered in rectangle (50,50,700,320)
+        // Rectangle center: (400, 210)
+        const char *questionText = QUESTIONS[currentQuestionIndex].text;
+        drawUtf8MultiLineCentered(display, &Lexend_Light40pt7b, questionText, 400, 210, GxEPD_BLACK);
+
+        // Draw category banner (inverted)
+        display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
+
+        const char *categoryText = QUESTIONS[currentQuestionIndex].category;
+        drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
+
+      } while (display.nextPage());
+      display.hibernate();
+    }
+
+    // COMMENTED OUT: Old display update logic
+    // g_displayManager.setCurrentButton(currentButton);
+    // g_displayManager.setDisplayCommand(DISPLAY_TEXT);
 
 #ifdef DEBUG_IO
     debugIO();
