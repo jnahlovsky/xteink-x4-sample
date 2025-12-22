@@ -114,9 +114,9 @@ void setup()
   display.hibernate();
   Serial.println("Question displayed");
 
-  // Start display task for sleep screen with logo
+  // Start display task (without triggering initial logo display)
   g_displayManager.setCurrentButton(NONE);
-  g_displayManager.setDisplayCommand(DISPLAY_INITIAL);
+  // g_displayManager.setDisplayCommand(DISPLAY_INITIAL); // Commented out - skip initial logo
   g_displayManager.startDisplayTask();
   Serial.println("Display task created");
 

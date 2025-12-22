@@ -171,12 +171,8 @@ void DisplayManager::updateDisplay()
       {
         display.fillScreen(GxEPD_WHITE);
 
-        // Draw logo image centered
-        int16_t imgWidth = 400;
-        int16_t imgHeight = 400;
-        int16_t imgX = (display.width() - imgWidth) / 2;
-        int16_t imgY = (display.height() - imgHeight) / 2;
-        display.drawBitmap(imgX, imgY, logo, imgWidth, imgHeight, GxEPD_BLACK);
+        // Draw fullscreen logo image
+        display.drawBitmap(0, 0, logo, 800, 480, GxEPD_BLACK);
       } while (display.nextPage());
     }
     else if (cmd == DISPLAY_TEXT)
@@ -213,12 +209,8 @@ void DisplayManager::updateDisplay()
       {
         display.fillScreen(GxEPD_WHITE);
 
-        // Draw image at bottom right
-        int16_t imgWidth = 400;
-        int16_t imgHeight = 400;
-        int16_t imgX = 480 - imgWidth - 40;
-        int16_t imgY = 800 - imgHeight - 200;
-        display.drawBitmap(imgX, imgY, logo, imgWidth, imgHeight, GxEPD_BLACK);
+        // Draw fullscreen logo image
+        display.drawBitmap(0, 0, logo, 800, 480, GxEPD_BLACK);
       } while (display.nextPage());
     }
   }

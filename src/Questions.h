@@ -21,11 +21,11 @@ const char* const CATEGORY_NAMES[] PROGMEM = {
     "EMOCE",
     "FANTAZIE",
     "VZTAHY",
-    "MOJE TĚLO",
-    "ŠKOLA / PRÁCE",
+    "JÁ A MOJE TĚLO",
+    "ŠKOLA ŽIVOTA",
     "PŘÍRODA",
-    "CO KDYBY",
-    "TAJEMSTVÍ",
+    "CO BY KDYBY",
+    "SKRYTÁ ZÁKOUTÍ",
 };
 
 // Question data structure

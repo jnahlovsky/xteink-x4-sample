@@ -17,11 +17,11 @@ def convert():
         "Emotions": "EMOCE",
         "Fantasy": "FANTAZIE",
         "Relationships": "VZTAHY",
-        "MyBody": "MOJE TĚLO",
-        "School": "ŠKOLA / PRÁCE",
+        "MyBody": "JÁ A MOJE TĚLO",
+        "School": "ŠKOLA ŽIVOTA",
         "Nature": "PŘÍRODA",
-        "WhatIf": "CO KDYBY",
-        "Secrets": "TAJEMSTVÍ"
+        "WhatIf": "CO BY KDYBY",
+        "Secrets": "SKRYTÁ ZÁKOUTÍ"
     }
 
     cat_enum_names = list(cat_map.keys())
