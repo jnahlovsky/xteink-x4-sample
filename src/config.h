@@ -38,4 +38,10 @@ const int BTN_VOLUME_UP_VAL = 2205;
 const unsigned long POWER_BUTTON_WAKEUP_MS = 1000; // Time required to confirm boot from sleep
 const unsigned long POWER_BUTTON_SLEEP_MS = 1000;  // Time required to enter sleep mode
 
+// Display refresh configuration
+const int FULL_REFRESH_INTERVAL = -1;                        // -1 = never, 0 = always, N = every N updates
+const unsigned long BUTTON_DEBOUNCE_FULL_MS = 500;           // Debounce time after full refresh
+const unsigned long BUTTON_DEBOUNCE_PARTIAL_SINGLE_MS = 500; // Debounce time after single-region partial refresh (question only)
+const unsigned long BUTTON_DEBOUNCE_PARTIAL_DUAL_MS = 500;   // Debounce time after dual-region partial refresh (question + banner)
+
 #endif // CONFIG_H

@@ -12,6 +12,7 @@
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
 #include "Questions.h"
+#include "logo.h"
 
 // Current question state
 int currentQuestionIndex = 0;
@@ -31,6 +32,34 @@ GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(
 // Global managers
 static DisplayManager g_displayManager(display);
 static PowerManager g_powerManager(&g_displayManager);
+
+// Category tracking for selective refresh (global scope for initialization in setup)
+static char lastCategory[32] = "";
+
+// Display helper functions
+void drawBorder()
+{
+  // Draw 5px thick rounded rectangle border
+  for (int i = 0; i < 5; i++)
+  {
+    display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
+  }
+}
+
+void drawQuestionText(const char *text)
+{
+  // Display question centered in rectangle (50,50,700,320)
+  // Rectangle center: (400, 210)
+  // Inner box is 700x320, with padding we use 640x280 for text
+  drawUtf8MultiLineWrapped(display, &Lexend_Light40pt7b, text, 400, 210, 640, 280, GxEPD_BLACK);
+}
+
+void drawCategoryBanner(const char *category)
+{
+  // Draw category banner at bottom (inverted colors)
+  display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
+  drawUtf8StringCentered(display, &Lexend_Bold24pt7b, category, 400, 435, GxEPD_WHITE);
+}
 
 void setup()
 {
@@ -85,40 +114,35 @@ void setup()
     Serial.println("\n SD card not detected");
   }
 
-  // Draw initial question screen
+  // Draw initial question screen with full refresh (includes border)
   display.setFullWindow();
   display.firstPage();
   do
   {
     display.fillScreen(GxEPD_WHITE);
 
-    // Draw inner rounded rectangle for question area (3px thick border)
-    for (int i = 0; i < 3; i++)
-    {
-      display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
-    }
+    drawBorder();
 
-    // Display question text centered in rectangle (50,50,700,320)
-    // Rectangle center: (400, 210)
-    // Inner box is 700x320, with padding we use 640x280 for text
     const char *questionText = getQuestionText(currentQuestionIndex);
-    drawUtf8MultiLineWrapped(display, &Lexend_Light40pt7b, questionText, 400, 210, 640, 280, GxEPD_BLACK);
-
-    // Draw category banner at bottom (inverted colors)
-    display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
+    drawQuestionText(questionText);
 
     const char *categoryText = getQuestionCategory(currentQuestionIndex);
-    drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
+    drawCategoryBanner(categoryText);
 
   } while (display.nextPage());
   display.hibernate();
   Serial.println("Question displayed");
 
-  // Start display task (without triggering initial logo display)
-  g_displayManager.setCurrentButton(NONE);
-  // g_displayManager.setDisplayCommand(DISPLAY_INITIAL); // Commented out - skip initial logo
-  g_displayManager.startDisplayTask();
-  Serial.println("Display task created");
+  // Initialize category tracking for partial refresh optimization
+  strncpy(lastCategory, getQuestionCategory(currentQuestionIndex), 31);
+  lastCategory[31] = '\0';
+
+  // DisplayManager task not used - using direct synchronous rendering for button-driven navigation
+  // This approach is simpler, more predictable, and saves ~4KB RAM
+  // g_displayManager.setCurrentButton(NONE);
+  // g_displayManager.setDisplayCommand(DISPLAY_INITIAL);
+  // g_displayManager.startDisplayTask();
+  // Serial.println("Display task created");
 
   Serial.println("Setup complete!\n");
 }
@@ -158,6 +182,19 @@ void debugIO()
 
 void loop()
 {
+  // Debounce tracking
+  static unsigned long debounceEndTime = 0;
+  static int refreshCount = 0;
+
+  // Check if still in debounce window
+  if (millis() < debounceEndTime)
+  {
+    // Silently ignore button presses during debounce
+    g_buttonHandler.setLastButton(g_buttonHandler.getPressedButton());
+    delay(50);
+    return;
+  }
+
   Button currentButton = g_buttonHandler.getPressedButton();
   Button lastButton = g_buttonHandler.getLastButton();
 
@@ -191,36 +228,113 @@ void loop()
       needsRedraw = true;
       Serial.printf("Random question: %d\n", currentQuestionIndex);
     }
+    else if (currentButton == VOLUME_UP)
+    {
+      // Next category - find next question in different category
+      const char *currentCat = getQuestionCategory(currentQuestionIndex);
+      int nextIndex = (currentQuestionIndex + 1) % getQuestionCount();
+      while (strcmp(getQuestionCategory(nextIndex), currentCat) == 0 && nextIndex != currentQuestionIndex)
+      {
+        nextIndex = (nextIndex + 1) % getQuestionCount();
+      }
+      currentQuestionIndex = nextIndex;
+      needsRedraw = true;
+      Serial.printf("Next category question: %d\n", currentQuestionIndex);
+    }
+    else if (currentButton == VOLUME_DOWN)
+    {
+      // Previous category - find previous question in different category
+      const char *currentCat = getQuestionCategory(currentQuestionIndex);
+      int prevIndex = (currentQuestionIndex - 1 + getQuestionCount()) % getQuestionCount();
+      while (strcmp(getQuestionCategory(prevIndex), currentCat) == 0 && prevIndex != currentQuestionIndex)
+      {
+        prevIndex = (prevIndex - 1 + getQuestionCount()) % getQuestionCount();
+      }
+      currentQuestionIndex = prevIndex;
+      needsRedraw = true;
+      Serial.printf("Previous category question: %d\n", currentQuestionIndex);
+    }
 
     // Redraw display if needed
     if (needsRedraw)
     {
-      display.setFullWindow();
-      display.firstPage();
-      do
+      const char *currentCategory = getQuestionCategory(currentQuestionIndex);
+      bool categoryChanged = (strcmp(lastCategory, currentCategory) != 0);
+
+      // Determine if we need full refresh
+      bool useFullRefresh = false;
+      if (FULL_REFRESH_INTERVAL >= 0) // -1 means never do periodic full refresh
       {
-        display.fillScreen(GxEPD_WHITE);
-
-        // Draw rounded rectangle border (3px thick)
-        for (int i = 0; i < 3; i++)
+        refreshCount++;
+        if (FULL_REFRESH_INTERVAL == 0 || refreshCount >= FULL_REFRESH_INTERVAL)
         {
-          display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
+          useFullRefresh = true;
+          refreshCount = 0;
+          Serial.println("Periodic full refresh");
         }
+      }
 
-        // Display question centered in rectangle (50,50,700,320)
-        // Rectangle center: (400, 210)
-        // Inner box is 700x320, with padding we use 640x280 for text
-        const char *questionText = getQuestionText(currentQuestionIndex);
-        drawUtf8MultiLineWrapped(display, &Lexend_Light40pt7b, questionText, 400, 210, 640, 280, GxEPD_BLACK);
+      if (useFullRefresh)
+      {
+        // Full refresh - redraw everything including border
+        display.setFullWindow();
+        display.firstPage();
+        do
+        {
+          display.fillScreen(GxEPD_WHITE);
+          drawBorder();
+          drawQuestionText(getQuestionText(currentQuestionIndex));
+          drawCategoryBanner(currentCategory);
+        } while (display.nextPage());
+        display.hibernate();
 
-        // Draw category banner (inverted)
-        display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
+        debounceEndTime = millis() + BUTTON_DEBOUNCE_FULL_MS;
+      }
+      else if (categoryChanged)
+      {
+        // Category changed - refresh both question and banner
+        Serial.println("Partial refresh (dual-region): question + banner");
 
-        const char *categoryText = getQuestionCategory(currentQuestionIndex);
-        drawUtf8StringCentered(display, &Lexend_Bold24pt7b, categoryText, 400, 435, GxEPD_WHITE);
+        // Single partial window covering both regions - redraw border to fix any erasure
+        display.setPartialWindow(60, 60, 675, 395);
+        display.firstPage();
+        do
+        {
+          display.fillScreen(GxEPD_WHITE);
 
-      } while (display.nextPage());
-      display.hibernate();
+          // Redraw border in case it gets affected by the partial window
+          drawBorder();
+
+          drawQuestionText(getQuestionText(currentQuestionIndex));
+          drawCategoryBanner(currentCategory);
+        } while (display.nextPage());
+        display.hibernate();
+
+        debounceEndTime = millis() + BUTTON_DEBOUNCE_PARTIAL_DUAL_MS;
+
+        // Update category tracking
+        strncpy(lastCategory, currentCategory, 31);
+        lastCategory[31] = '\0';
+      }
+      else
+      {
+        // Same category - only refresh question area
+        Serial.println("Partial refresh (single-region): question only");
+
+        // Partial window with 10px margin from 5px border, stops before bottom border
+        // Border is at (50, 50, 700, 320), inner edge at (55, 55) to (745, 365)
+        // Partial window: 60 to 735 horizontally, 60 to 355 vertically (5px margin from bottom border)
+        display.setPartialWindow(60, 60, 675, 295);
+        display.firstPage();
+        do
+        {
+          display.fillScreen(GxEPD_WHITE);
+          drawQuestionText(getQuestionText(currentQuestionIndex));
+        } while (display.nextPage());
+        display.hibernate();
+
+        debounceEndTime = millis() + BUTTON_DEBOUNCE_PARTIAL_SINGLE_MS;
+      }
     }
 
     // COMMENTED OUT: Old display update logic
@@ -241,7 +355,25 @@ void loop()
       unsigned long currentTime = millis();
       // Power button long pressed => go to sleep
       if (currentTime - startTime > POWER_BUTTON_SLEEP_MS)
-        g_powerManager.enterDeepSleep();
+      {
+        // Display sleep screen with logo
+        Serial.println("Displaying sleep screen...");
+        display.setFullWindow();
+        display.firstPage();
+        do
+        {
+          display.fillScreen(GxEPD_WHITE);
+          display.drawBitmap(0, 0, logo, 800, 480, GxEPD_BLACK);
+        } while (display.nextPage());
+        display.hibernate();
+
+        Serial.println("Entering deep sleep...");
+        delay(1000);
+
+        // Enter deep sleep (without DisplayManager command)
+        esp_deep_sleep_enable_gpio_wakeup(1ULL << BTN_GPIO3, ESP_GPIO_WAKEUP_GPIO_LOW);
+        esp_deep_sleep_start();
+      }
     }
   }
 
