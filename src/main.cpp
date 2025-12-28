@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <GxEPD2_BW.h>
 #include <SPI.h>
+#include <Preferences.h>
 
 #include "config.h"
 #include "BatteryMonitor.h"
@@ -16,6 +17,9 @@
 
 // Current question state
 int currentQuestionIndex = 0;
+
+// Preferences for NVS storage
+Preferences preferences;
 
 // Global objects
 static BatteryMonitor g_battery(BAT_GPIO0);
@@ -35,6 +39,42 @@ static PowerManager g_powerManager(&g_displayManager);
 
 // Category tracking for selective refresh (global scope for initialization in setup)
 static char lastCategory[32] = "";
+
+// State persistence functions
+int loadLastCardIndex()
+{
+  if (!preferences.begin("cardApp", true)) // true = read-only mode
+  {
+    Serial.println("Failed to open NVS for reading");
+    return 0;
+  }
+
+  int savedIndex = preferences.getInt("lastCardId", 0);
+  preferences.end();
+
+  // Validate the index is within bounds
+  if (savedIndex < 0 || savedIndex >= getQuestionCount())
+  {
+    Serial.printf("Invalid saved index %d, defaulting to 0\n", savedIndex);
+    return 0;
+  }
+
+  Serial.printf("Loaded last card index: %d\n", savedIndex);
+  return savedIndex;
+}
+
+void saveLastCardIndex()
+{
+  if (!preferences.begin("cardApp", false)) // false = read-write mode
+  {
+    Serial.println("Failed to open NVS for writing");
+    return;
+  }
+
+  preferences.putInt("lastCardId", currentQuestionIndex);
+  preferences.end();
+  Serial.printf("Saved last card index: %d\n", currentQuestionIndex);
+}
 
 // Display helper functions
 void drawBorder()
@@ -113,6 +153,9 @@ void setup()
   {
     Serial.println("\n SD card not detected");
   }
+
+  // Load last viewed card from NVS
+  currentQuestionIndex = loadLastCardIndex();
 
   // Draw initial question screen with full refresh (includes border)
   display.setFullWindow();
@@ -356,6 +399,9 @@ void loop()
       // Power button long pressed => go to sleep
       if (currentTime - startTime > POWER_BUTTON_SLEEP_MS)
       {
+        // Save current card state before sleep
+        saveLastCardIndex();
+
         // Display sleep screen with logo
         Serial.println("Displaying sleep screen...");
         display.setFullWindow();
