@@ -9,6 +9,7 @@
 #include "DisplayManager.h"
 #include "PowerManager.h"
 #include "SDCardManager.h"
+#include "Lexend_Bold18pt7b.h"
 #include "Lexend_Bold24pt7b.h"
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
@@ -39,6 +40,12 @@ static PowerManager g_powerManager(&g_displayManager);
 
 // Category tracking for selective refresh (global scope for initialization in setup)
 static char lastCategory[32] = "";
+
+// Battery state tracking for independent updates
+static int lastDisplayedBatteryLevel = -1; // Battery level in 10% increments (0-10)
+static bool lastChargingState = false;
+static unsigned long lastBatteryCheckTime = 0;
+const unsigned long BATTERY_CHECK_INTERVAL_MS = 5000; // Check every 5 seconds
 
 // State persistence functions
 int loadLastCardIndex()
@@ -86,6 +93,57 @@ void drawBorder()
   }
 }
 
+void drawBatteryIcon(int x, int y, int percentage)
+{
+  // Battery icon dimensions
+  const int ICON_WIDTH = 28;
+  const int ICON_HEIGHT = 16;
+  const int TIP_WIDTH = 3;
+  const int TIP_HEIGHT = 8;
+  const int BORDER = 2;
+
+  // Main battery body outline (right-aligned)
+  int bodyX = x - ICON_WIDTH;
+  display.drawRect(bodyX, y, ICON_WIDTH - TIP_WIDTH, ICON_HEIGHT, GxEPD_BLACK);
+  display.drawRect(bodyX + 1, y + 1, ICON_WIDTH - TIP_WIDTH - 2, ICON_HEIGHT - 2, GxEPD_BLACK);
+
+  // Positive terminal nub (right side)
+  int tipY = y + (ICON_HEIGHT - TIP_HEIGHT) / 2;
+  display.fillRect(x - TIP_WIDTH, tipY, TIP_WIDTH, TIP_HEIGHT, GxEPD_BLACK);
+
+  // Calculate fill width based on percentage (inside 2px border)
+  // Round to 10% increments: 0%, 10%, 20%, ..., 100%
+  int fillLevel = (percentage + 5) / 10; // Round to nearest 10%
+  if (fillLevel < 0)
+    fillLevel = 0;
+  if (fillLevel > 10)
+    fillLevel = 10;
+
+  int innerX = bodyX + BORDER;
+  int innerY = y + BORDER;
+  int innerHeight = ICON_HEIGHT - (BORDER * 2);
+  int maxFillWidth = ICON_WIDTH - TIP_WIDTH - (BORDER * 2);
+  int fillWidth = (maxFillWidth * fillLevel) / 10;
+
+  // Draw fill bar (empty if <10%)
+  if (fillWidth > 0)
+  {
+    display.fillRect(innerX, innerY, fillWidth, innerHeight, GxEPD_BLACK);
+  }
+}
+
+void drawBatteryStatus(const char *statusText, int x, int y)
+{
+  // Draw status text to the left of battery icon
+  if (statusText != nullptr && statusText[0] != '\0')
+  {
+    display.setFont(&Lexend_Bold18pt7b);
+    display.setCursor(x, y);
+    display.setTextColor(GxEPD_BLACK);
+    display.print(statusText);
+  }
+}
+
 void drawQuestionText(const char *text)
 {
   // Display question centered in rectangle (50,50,700,320)
@@ -99,6 +157,79 @@ void drawCategoryBanner(const char *category)
   // Draw category banner at bottom (inverted colors)
   display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
   drawUtf8StringCentered(display, &Lexend_Bold24pt7b, category, 400, 435, GxEPD_WHITE);
+}
+
+void updateBatteryDisplay(int percentage, bool isCharging)
+{
+  // Independent battery update using small partial window
+  // Window covers percentage + icon area in top-right corner
+  // Percentage right-aligned next to icon with 5px gap
+  const int WINDOW_X = 640;
+  const int WINDOW_Y = 10;
+  const int WINDOW_W = 150;
+  const int WINDOW_H = 30;
+  const int BATTERY_ICON_RIGHT_X = 780; // 20px from screen edge
+  const int TEXT_ICON_GAP = 5;
+
+  display.setPartialWindow(WINDOW_X, WINDOW_Y, WINDOW_W, WINDOW_H);
+  display.firstPage();
+  do
+  {
+    display.fillRect(WINDOW_X, WINDOW_Y, WINDOW_W, WINDOW_H, GxEPD_WHITE);
+
+    // Draw battery icon first
+    drawBatteryIcon(BATTERY_ICON_RIGHT_X, 17, percentage);
+
+    // Show percentage when charging
+    if (isCharging)
+    {
+      char percentText[8];
+      int displayPercent = (percentage >= 95) ? 100 : percentage;
+      snprintf(percentText, sizeof(percentText), "%d%%", displayPercent);
+
+      display.setFont(&Lexend_Bold18pt7b);
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(percentText, 0, 0, &x1, &y1, &w, &h);
+      int textX = BATTERY_ICON_RIGHT_X - 28 - TEXT_ICON_GAP - w; // 28 = ICON_WIDTH
+      drawBatteryStatus(percentText, textX, 30);
+    }
+  } while (display.nextPage());
+  display.hibernate();
+
+  Serial.printf("Battery display updated: %d%% (charging: %s)\n", percentage, isCharging ? "yes" : "no");
+}
+
+void checkBatteryUpdate()
+{
+  unsigned long now = millis();
+  if (now - lastBatteryCheckTime < BATTERY_CHECK_INTERVAL_MS)
+  {
+    return; // Not time to check yet
+  }
+  lastBatteryCheckTime = now;
+
+  // Read current battery state
+  int currentPercent = g_battery.readPercentage();
+  bool isCharging = digitalRead(UART0_RXD) == HIGH;
+
+  // Round to 10% level (0-10)
+  int currentLevel = (currentPercent + 5) / 10;
+  if (currentLevel < 0)
+    currentLevel = 0;
+  if (currentLevel > 10)
+    currentLevel = 10;
+
+  // Check if update needed (level changed by 10% or charging state changed)
+  bool levelChanged = (currentLevel != lastDisplayedBatteryLevel);
+  bool chargingChanged = (isCharging != lastChargingState);
+
+  if (levelChanged || chargingChanged)
+  {
+    updateBatteryDisplay(currentPercent, isCharging);
+    lastDisplayedBatteryLevel = currentLevel;
+    lastChargingState = isCharging;
+  }
 }
 
 void setup()
@@ -171,6 +302,30 @@ void setup()
 
     const char *categoryText = getQuestionCategory(currentQuestionIndex);
     drawCategoryBanner(categoryText);
+
+    // Draw battery icon with current status (top-right corner)
+    int batteryPercent = g_battery.readPercentage();
+    bool isCharging = digitalRead(UART0_RXD) == HIGH;
+
+    // Position text right-aligned next to icon
+    const int BATTERY_ICON_RIGHT_X = 780;
+    const int TEXT_ICON_GAP = 5;
+    drawBatteryIcon(BATTERY_ICON_RIGHT_X, 17, batteryPercent);
+
+    // Show percentage when charging
+    if (isCharging)
+    {
+      char percentText[8];
+      int displayPercent = (batteryPercent >= 95) ? 100 : batteryPercent;
+      snprintf(percentText, sizeof(percentText), "%d%%", displayPercent);
+
+      display.setFont(&Lexend_Bold18pt7b);
+      int16_t x1, y1;
+      uint16_t w, h;
+      display.getTextBounds(percentText, 0, 0, &x1, &y1, &w, &h);
+      int textX = BATTERY_ICON_RIGHT_X - 28 - TEXT_ICON_GAP - w;
+      drawBatteryStatus(percentText, textX, 30);
+    }
 
   } while (display.nextPage());
   display.hibernate();
@@ -328,6 +483,30 @@ void loop()
           drawBorder();
           drawQuestionText(getQuestionText(currentQuestionIndex));
           drawCategoryBanner(currentCategory);
+
+          // Draw battery icon with current status (top-right corner)
+          int batteryPercent = g_battery.readPercentage();
+          bool isCharging = digitalRead(UART0_RXD) == HIGH;
+
+          // Position text right-aligned next to icon
+          const int BATTERY_ICON_RIGHT_X = 780;
+          const int TEXT_ICON_GAP = 5;
+          drawBatteryIcon(BATTERY_ICON_RIGHT_X, 17, batteryPercent);
+
+          // Show percentage when charging
+          if (isCharging)
+          {
+            char percentText[8];
+            int displayPercent = (batteryPercent >= 95) ? 100 : batteryPercent;
+            snprintf(percentText, sizeof(percentText), "%d%%", displayPercent);
+
+            display.setFont(&Lexend_Bold18pt7b);
+            int16_t x1, y1;
+            uint16_t w, h;
+            display.getTextBounds(percentText, 0, 0, &x1, &y1, &w, &h);
+            int textX = BATTERY_ICON_RIGHT_X - 28 - TEXT_ICON_GAP - w;
+            drawBatteryStatus(percentText, textX, 30);
+          }
         } while (display.nextPage());
         display.hibernate();
 
@@ -336,10 +515,10 @@ void loop()
       else if (categoryChanged)
       {
         // Category changed - refresh both question and banner
-        Serial.println("Partial refresh (dual-region): question + banner");
+        Serial.println("Partial refresh (dual-region): question + banner + battery");
 
-        // Single partial window covering both regions - redraw border to fix any erasure
-        display.setPartialWindow(60, 60, 675, 395);
+        // Single partial window covering both regions + battery - redraw border to fix any erasure
+        display.setPartialWindow(60, 60, 690, 395);
         display.firstPage();
         do
         {
@@ -350,6 +529,30 @@ void loop()
 
           drawQuestionText(getQuestionText(currentQuestionIndex));
           drawCategoryBanner(currentCategory);
+
+          // Draw battery icon with current status (top-right corner)
+          int batteryPercent = g_battery.readPercentage();
+          bool isCharging = digitalRead(UART0_RXD) == HIGH;
+
+          // Position text right-aligned next to icon
+          const int BATTERY_ICON_RIGHT_X = 780;
+          const int TEXT_ICON_GAP = 5;
+          drawBatteryIcon(BATTERY_ICON_RIGHT_X, 17, batteryPercent);
+
+          // Show percentage when charging
+          if (isCharging)
+          {
+            char percentText[8];
+            int displayPercent = (batteryPercent >= 95) ? 100 : batteryPercent;
+            snprintf(percentText, sizeof(percentText), "%d%%", displayPercent);
+
+            display.setFont(&Lexend_Bold18pt7b);
+            int16_t x1, y1;
+            uint16_t w, h;
+            display.getTextBounds(percentText, 0, 0, &x1, &y1, &w, &h);
+            int textX = BATTERY_ICON_RIGHT_X - 28 - TEXT_ICON_GAP - w;
+            drawBatteryStatus(percentText, textX, 30);
+          }
         } while (display.nextPage());
         display.hibernate();
 
@@ -361,7 +564,7 @@ void loop()
       }
       else
       {
-        // Same category - only refresh question area
+        // Same category - only refresh question area (skip battery to minimize refresh)
         Serial.println("Partial refresh (single-region): question only");
 
         // Partial window with 10px margin from 5px border, stops before bottom border
@@ -424,6 +627,9 @@ void loop()
   }
 
   g_buttonHandler.setLastButton(currentButton);
+
+  // Check for battery updates (independent of button presses)
+  checkBatteryUpdate();
 
   delay(50);
 }

@@ -146,15 +146,14 @@ The UI follows the physical card game design with:
 ║   │                                             │   ║  ← Rounded border
 ║   │              LONG QUESTION HERE ?           │   ║  ← Question centered
 ║   │                                             │   ║
-║   │   (Question text in                         │   ║
-║   │    Lexend font)                             │   ║
+║   │             (Question text in               │   ║
+║   │                Lexend font)                 │   ║
 ║   │                                             │   ║
 ║   ╰─────────────────────────────────────────────╯   ║
 ║   ┌─────────────────────────────────────────────┐   ║  ← Bird + Banner + Door
-║   │  LOGO                      CATEGORY NAME    │   ║  ← Category banner
+║   │ LOGO       CATEGORY NAME      battery status│   ║  ← Category banner + others
 ║   └─────────────────────────────────────────────┘   ║
 ╚═════════════════════════════════════════════════════╝
-         [Battery indicator]
 ```
 
 ### Visual Elements
