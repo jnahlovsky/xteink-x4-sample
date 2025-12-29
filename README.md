@@ -1,12 +1,7 @@
-# Xteink X4 Sample
+# Question Card Game
 
-A simple sample project for the Xteink X4 e-ink device using the GxEPD2 library.
+An interactive question card game for the Xteink X4 e-ink device. Navigate through 320+ thought-provoking questions across 8 different categories using physical buttons. Features a clean UI with custom Lexend typography and category icons.
 
-Join our Discord server for support and discussion:
-
-- [Xteink eReader Community](https://discord.gg/2cdKUbWRE8)
-
-![Sample](images/sample.png)
 
 ## Hardware
 
@@ -21,15 +16,19 @@ Join our Discord server for support and discussion:
 
 ### Resources
 
-- [Hardware Schematics](https://github.com/sunwoods/Xteink-X4) - XteinkX4 circuit diagrams
+- [Hardware Schematics](https://github.com/sunwoods/Xteink-X4) - Xteink X4 circuit diagrams
 - [Display Datasheet](https://www.good-display.com/product/457.html) - 4.26" GDEQ0426T82 specifications
 
 ## Features
 
-- Basic GxEPD2 display initialization
-- Custom SPI pin configuration
-- Button input detection via ADC
-- Simple text display examples
+- 320+ questions across 8 categories (Emotions, Fantasy, Relationships, My Body, School of Life, Nature, What If, Hidden Corners)
+- Interactive navigation with physical buttons
+- Clean UI with Lexend font family
+- Category icons and themed display
+- Battery level indicator
+- Deep sleep power management
+- Auto-conversion of CSV questions to C++ header
+- Progress tracking and random question selection
 
 ## Building
 
@@ -52,12 +51,12 @@ Before flashing custom firmware, back up the factory firmware:
 
 ```powershell
 # Read entire 16MB flash
-python -m esptool --chip esp32c3 --port COM6 read_flash 0x0 0x1000000 firmware_backup.bin
+python -m esptool --chip esp32c3 --port COM6 read_flash 0x0 0x1000000 backup/firmware_backup.bin
 ```
 
 ```powershell
 # Read only app0 (faster)
-python -m esptool --chip esp32c3 --port COM6 read_flash 0x10000 0x640000 app0_backup.bin
+python -m esptool --chip esp32c3 --port COM6 read_flash 0x10000 0x640000 backup/app0_backup.bin
 ```
 
 ### Restore Original Firmware
@@ -66,12 +65,12 @@ To restore the backed-up firmware:
 
 ```powershell
 # Write back the entire flash
-python -m esptool --chip esp32c3 --port COM6 write_flash 0x0 firmware_backup.bin
+python -m esptool --chip esp32c3 --port COM6 write_flash 0x0 backup/firmware_backup.bin
 ```
 
 ```powershell
 # Write back only app0 (faster)
-python -m esptool --chip esp32c3 --port COM6 write_flash 0x10000 app0_backup.bin
+python -m esptool --chip esp32c3 --port COM6 write_flash 0x10000 backup/app0_backup.bin
 ```
 
 **Important**: Make sure to use the correct COM port for your device.
@@ -80,14 +79,14 @@ python -m esptool --chip esp32c3 --port COM6 write_flash 0x10000 app0_backup.bin
 
 ```powershell
 # Backup current OTA data first
-python -m esptool --port COM6 read_flash 0xE000 0x2000 otadata_backup.bin
+python -m esptool --port COM6 read_flash 0xE000 0x2000 backup/otadata_backup.bin
 
 # Flash to switch boot partition
 # Boot app0
-python -m esptool --port COM6 write_flash 0xE000 otadata_boot_app0.bin
+python -m esptool --port COM6 write_flash 0xE000 backup/otadata_boot_app0.bin
 
 # Boot app1
-python -m esptool --port COM6 write_flash 0xE000 otadata_boot_app1.bin
+python -m esptool --port COM6 write_flash 0xE000 backup/otadata_boot_app1.bin
 ```
 
 ## Notes
@@ -109,7 +108,7 @@ python -m esptool --port COM6 write_flash 0xE000 otadata_boot_app1.bin
 
 ## Button System
 
-The XteinkX4 uses **resistor ladder networks** connected to two ADC pins for button detection. Each button press produces a unique analog voltage that's read via `analogRead()`.
+The device uses **resistor ladder networks** connected to two ADC pins for button detection. Each button press produces a unique analog voltage that's read via `analogRead()`.
 
 ### Button ADC Values
 
@@ -130,7 +129,8 @@ The XteinkX4 uses **resistor ladder networks** connected to two ADC pins for but
 **GPIO3**:
 
 - Pressed: LOW
-- This example uses a 1-second-long press for sleep and a 1-second-long press to wake from sleep
+- 1-second long press to enter sleep mode
+- 1-second long press to wake from sleep
 
 ### Battery Voltage
 

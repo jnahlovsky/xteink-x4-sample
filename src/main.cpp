@@ -26,7 +26,7 @@ static SDCardManager g_sdManager;
 static StateManager g_stateManager;
 
 // GxEPD2 display - Using GxEPD2_426_GDEQ0426T82
-// Note: XteinkX4 has 4.26" 800x480 display
+// Note: Xteink X4 has 4.26" 800x480 display
 GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> display(
     GxEPD2_426_GDEQ0426T82(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 

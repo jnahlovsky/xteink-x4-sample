@@ -1,3 +1,4 @@
+Import("env")
 import csv
 import os
 
@@ -142,5 +143,13 @@ inline int getQuestionCount()
 
     print(f"Successfully converted {len(questions_data)} questions to {OUTPUT_FILE}")
 
+def before_build(source, target, env):
+    """Convert cards.csv to Questions.h before build"""
+    print("Converting cards.csv to Questions.h...")
+    convert()
+
 if __name__ == "__main__":
     convert()
+else:
+    # Register the callback for PlatformIO
+    env.AddPreAction("buildprog", before_build)

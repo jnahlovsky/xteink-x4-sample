@@ -4,7 +4,7 @@
 // SPI Frequency
 #define SPI_FQ 40000000
 
-// Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
+// Display SPI pins (custom pins for Xteink X4, not hardware SPI defaults)
 #define EPD_SCLK 8  // SPI Clock
 #define EPD_MOSI 10 // SPI MOSI (Master Out Slave In)
 #define EPD_CS 21   // Chip Select
