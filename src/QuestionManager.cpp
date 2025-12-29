@@ -1,6 +1,7 @@
 // QuestionManager.cpp
 #include "QuestionManager.h"
 #include "config.h"
+#include "Lexend_Bold18pt7b.h"
 
 QuestionManager::QuestionManager(
     GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> &display,
@@ -150,6 +151,7 @@ void QuestionManager::drawQuestionWithBattery(const char *questionText, const ch
     int displayPercent = (batteryPercent >= 95) ? 100 : batteryPercent;
     snprintf(percentText, sizeof(percentText), "%d%%", displayPercent);
 
+    _display.setFont(&Lexend_Bold18pt7b);
     int16_t x1, y1;
     uint16_t w, h;
     _display.getTextBounds(percentText, 0, 0, &x1, &y1, &w, &h);
@@ -255,7 +257,7 @@ void QuestionManager::updateDisplay()
   }
   else
   {
-    // Same category - refresh question area + bottom elements
+    // Same category - refresh question area + bottom elements + battery
     Serial.println("Partial refresh (single-region): question + bottom elements");
 
     _display.setPartialWindow(10, 10, 740, 445);
@@ -265,7 +267,7 @@ void QuestionManager::updateDisplay()
       _display.fillScreen(GxEPD_WHITE);
       _uiRenderer.drawBorder();
       _uiRenderer.drawCardNumber(_currentIndex, getQuestionCount());
-      _uiRenderer.drawQuestionText(getQuestionText(_currentIndex));
+      drawQuestionWithBattery(getQuestionText(_currentIndex), currentCategory);
       _uiRenderer.drawParrotWithCutout();
       _uiRenderer.drawCategoryBanner(currentCategory);
       _uiRenderer.drawCategoryIconInCircle();

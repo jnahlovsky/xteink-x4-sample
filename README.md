@@ -89,6 +89,12 @@ python -m esptool --port COM6 write_flash 0xE000 backup/otadata_boot_app0.bin
 python -m esptool --port COM6 write_flash 0xE000 backup/otadata_boot_app1.bin
 ```
 
+### Generating custom fonts with diacritics
+
+```powershell
+python src/ttf_to_gfx.py src/Lexend-Bold.ttf 32 32 383 src/Lexend_Bold32pt7b.h
+```
+
 ## Notes
 
 - This uses `GxEPD2_426_GDEQ0426T82` as the display class for the 4.26" 800x480 display

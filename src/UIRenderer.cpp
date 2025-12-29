@@ -2,6 +2,7 @@
 #include "UIRenderer.h"
 #include "Lexend_Bold18pt7b.h"
 #include "Lexend_Bold24pt7b.h"
+#include "Lexend_Bold32pt7b.h"
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
 #include "parrot.h"
@@ -113,35 +114,33 @@ void UIRenderer::drawQuestionText(const char *text)
 void UIRenderer::drawCategoryBanner(const char *category)
 {
   // Draw category banner overlaying the border bottom
-  // Banner: 400x80px, 60px from bottom
-  // Circle center at 150px from right (X=650), banner right edge aligned with circle
+  // Banner: 420x80px (extended 20px to the right), 60px from bottom
+  // Banner right edge now aligns with circle center at X=670
   // Display height = 480px, so Y = 480 - 60 - 80 = 340
-  const int BANNER_X = 250; // Right edge at 650 (150px from right)
+  const int BANNER_X = 250; // Left edge
   const int BANNER_Y = 340;
-  const int BANNER_WIDTH = 400;
+  const int BANNER_WIDTH = 420; // Extended from 400 to 420 (20px wider)
   const int BANNER_HEIGHT = 80;
   const int BANNER_RADIUS = 40; // Fully rounded corners
 
   _display.fillRoundRect(BANNER_X, BANNER_Y, BANNER_WIDTH, BANNER_HEIGHT, BANNER_RADIUS, GxEPD_BLACK);
 
-  // Center text vertically and horizontally in banner
-  // Banner center X = 250 + 400/2 = 450
+  // Center text vertically and horizontally in banner, shifted 10px left
+  // Banner center X = 250 + 400/2 = 450, minus 10px = 440
   // Text baseline Y = 340 + 80/2 + font_offset
-  drawUtf8StringCentered(_display, &Lexend_Bold24pt7b, category, 450, 390, GxEPD_WHITE);
+  drawUtf8StringCentered(_display, &Lexend_Bold32pt7b, category, 440, 390, GxEPD_WHITE);
 }
 
 void UIRenderer::drawCategoryIconInCircle()
 {
-  // Draw category icon in white circle aligned with right side of banner
-  // Circle center at 150px from right side (800 - 150 = 650)
-  // Banner is at (250, 340) with width 400, so right edge is at X=650
+  // Draw category icon in white circle, moved 20px right from banner edge
+  // Banner right edge at X=650, circle moved 20px right = 670
   // Circle: 120x120px (radius 60), center 100px from bottom (Y=380)
-  // Circle center X aligned with banner right edge (overlaying it)
-  const int BANNER_RIGHT_X = 250 + 400; // = 650 (150px from right)
-  const int CIRCLE_CENTER_X = BANNER_RIGHT_X;
-  const int CIRCLE_CENTER_Y = 480 - 100; // 100px from bottom = 380
-  const int CIRCLE_RADIUS = 60;          // 120px diameter
-  const int BORDER_THICKNESS = 5;        // Same as main border
+  const int BANNER_RIGHT_X = 250 + 400;            // = 650 (banner right edge)
+  const int CIRCLE_CENTER_X = BANNER_RIGHT_X + 20; // Moved 20px to the right
+  const int CIRCLE_CENTER_Y = 480 - 100;           // 100px from bottom = 380
+  const int CIRCLE_RADIUS = 60;                    // 120px diameter
+  const int BORDER_THICKNESS = 5;                  // Same as main border
 
   // Draw white filled circle with thick black border (5px)
   _display.fillCircle(CIRCLE_CENTER_X, CIRCLE_CENTER_Y, CIRCLE_RADIUS, GxEPD_WHITE);
