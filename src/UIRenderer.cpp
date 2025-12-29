@@ -6,6 +6,7 @@
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
 #include "parrot.h"
+#include "icons.h"
 
 UIRenderer::UIRenderer(GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> &display)
     : _display(display)
@@ -131,7 +132,7 @@ void UIRenderer::drawCategoryBanner(const char *category)
   drawUtf8StringCentered(_display, &Lexend_Bold32pt7b, category, 440, 390, GxEPD_WHITE);
 }
 
-void UIRenderer::drawCategoryIconInCircle()
+void UIRenderer::drawCategoryIconInCircle(uint8_t categoryIndex)
 {
   // Draw category icon in white circle, moved 20px right from banner edge
   // Banner right edge at X=650, circle moved 20px right = 670
@@ -149,15 +150,16 @@ void UIRenderer::drawCategoryIconInCircle()
     _display.drawCircle(CIRCLE_CENTER_X, CIRCLE_CENTER_Y, CIRCLE_RADIUS - i, GxEPD_BLACK);
   }
 
-  // Draw placeholder icon (rectangle with X)
-  // 84x84px - maximum square that fits inside 120px diameter circle
-  const int ICON_SIZE = 84;
-  const int ICON_X = CIRCLE_CENTER_X - ICON_SIZE / 2;
-  const int ICON_Y = CIRCLE_CENTER_Y - ICON_SIZE / 2;
+  // Extract icon from sprite sheet (80x80px)
+  uint8_t iconBuffer[800]; // 80x80 pixels / 8 bits = 800 bytes
+  extractIcon(categoryIndex, iconBuffer);
 
-  _display.drawRect(ICON_X, ICON_Y, ICON_SIZE, ICON_SIZE, GxEPD_BLACK);
-  _display.drawLine(ICON_X, ICON_Y, ICON_X + ICON_SIZE, ICON_Y + ICON_SIZE, GxEPD_BLACK);
-  _display.drawLine(ICON_X + ICON_SIZE, ICON_Y, ICON_X, ICON_Y + ICON_SIZE, GxEPD_BLACK);
+  // Center 80x80 icon in the circle
+  const int ICON_X = CIRCLE_CENTER_X - CATEGORY_ICON_WIDTH / 2;
+  const int ICON_Y = CIRCLE_CENTER_Y - CATEGORY_ICON_HEIGHT / 2;
+
+  // Draw the category icon (inverted to correct colors)
+  _display.drawInvertedBitmap(ICON_X, ICON_Y, iconBuffer, CATEGORY_ICON_WIDTH, CATEGORY_ICON_HEIGHT, GxEPD_BLACK);
 }
 
 void UIRenderer::updateBatteryDisplay(int percentage, bool isCharging)

@@ -25,7 +25,7 @@ public:
   void drawCategoryBanner(const char *category);
 
   // Draw category icon in circle (right side of banner)
-  void drawCategoryIconInCircle();
+  void drawCategoryIconInCircle(uint8_t categoryIndex);
 
   // Draw battery icon at specified position
   void drawBatteryIcon(int x, int y, int percentage);

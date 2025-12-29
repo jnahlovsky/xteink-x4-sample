@@ -4,20 +4,21 @@
 #include <Arduino.h>
 
 // Category enum for memory efficiency
-enum Category {
-    CAT_EMOTIONS,
-    CAT_FANTASY,
-    CAT_RELATIONSHIPS,
-    CAT_MYBODY,
-    CAT_SCHOOL,
-    CAT_NATURE,
-    CAT_WHATIF,
-    CAT_SECRETS,
-    CAT_COUNT
+enum Category
+{
+  CAT_EMOTIONS,
+  CAT_FANTASY,
+  CAT_RELATIONSHIPS,
+  CAT_MYBODY,
+  CAT_SCHOOL,
+  CAT_NATURE,
+  CAT_WHATIF,
+  CAT_SECRETS,
+  CAT_COUNT
 };
 
 // Category display names mapping
-const char* const CATEGORY_NAMES[] PROGMEM = {
+const char *const CATEGORY_NAMES[] PROGMEM = {
     "EMOCE",
     "FANTAZIE",
     "VZTAHY",
@@ -358,8 +359,7 @@ const Question QUESTIONS[] PROGMEM = {
     {"CO TI POMÁHÁ UTŘÍDIT SI MYŠLENKY?", CAT_SECRETS},
     {"JAKÝ KRÁSNÝ OKAMŽIK\nBY SIS PŘÁL/A ZNOVU\nPROŽÍT?", CAT_SECRETS},
     {"ZA CO JSI V ŽIVOTĚ NEJVÍC VDĚČNÝ/Á?", CAT_SECRETS},
-    {"PŘEDSTAV SI, ŽE TVŮJ ŽIVOT JE KNIHA A TY MŮŽEŠ PŘEPSAT NĚKTERÉ STRÁNKY. UDĚLÁŠ TO?", CAT_SECRETS}
-};
+    {"PŘEDSTAV SI, ŽE TVŮJ ŽIVOT JE KNIHA A TY MŮŽEŠ PŘEPSAT NĚKTERÉ STRÁNKY. UDĚLÁŠ TO?", CAT_SECRETS}};
 const int QUESTION_COUNT = sizeof(QUESTIONS) / sizeof(QUESTIONS[0]);
 
 // =============================================================================
@@ -371,7 +371,7 @@ inline const char *getQuestionText(int index)
 {
   if (index < 0 || index >= QUESTION_COUNT)
     return "";
-  return (const char*)pgm_read_ptr(&QUESTIONS[index].text);
+  return (const char *)pgm_read_ptr(&QUESTIONS[index].text);
 }
 
 // Get category name by index
@@ -380,7 +380,15 @@ inline const char *getQuestionCategory(int index)
   if (index < 0 || index >= QUESTION_COUNT)
     return "";
   Category cat = (Category)pgm_read_word(&QUESTIONS[index].category);
-  return (const char*)pgm_read_ptr(&CATEGORY_NAMES[cat]);
+  return (const char *)pgm_read_ptr(&CATEGORY_NAMES[cat]);
+}
+
+// Get category enum value by index
+inline Category getQuestionCategoryEnum(int index)
+{
+  if (index < 0 || index >= QUESTION_COUNT)
+    return CAT_EMOTIONS; // Default fallback
+  return (Category)pgm_read_word(&QUESTIONS[index].category);
 }
 
 // Get total number of questions

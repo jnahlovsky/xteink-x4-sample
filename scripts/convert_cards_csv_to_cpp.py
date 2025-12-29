@@ -126,6 +126,14 @@ inline const char *getQuestionCategory(int index)
   return (const char*)pgm_read_ptr(&CATEGORY_NAMES[cat]);
 }
 
+// Get category enum value by index
+inline Category getQuestionCategoryEnum(int index)
+{
+  if (index < 0 || index >= QUESTION_COUNT)
+    return CAT_EMOTIONS; // Default fallback
+  return (Category)pgm_read_word(&QUESTIONS[index].category);
+}
+
 // Get total number of questions
 inline int getQuestionCount()
 {

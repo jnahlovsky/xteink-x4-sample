@@ -57,7 +57,8 @@ void QuestionManager::displayInitialQuestion()
     _uiRenderer.drawCategoryBanner(categoryText);
 
     // Layer 6: Category icon in circle (right side of banner)
-    _uiRenderer.drawCategoryIconInCircle();
+    uint8_t categoryIndex = getQuestionCategoryEnum(_currentIndex);
+    _uiRenderer.drawCategoryIconInCircle(categoryIndex);
 
     // Layer 7: Battery (top-right)
     int batteryPercent = _battery.readPercentage();
@@ -227,7 +228,8 @@ void QuestionManager::updateDisplay()
       _uiRenderer.drawCategoryBanner(currentCategory);
 
       // Layer 6: Category icon
-      _uiRenderer.drawCategoryIconInCircle();
+      uint8_t categoryIndex = getQuestionCategoryEnum(_currentIndex);
+      _uiRenderer.drawCategoryIconInCircle(categoryIndex);
     } while (_display.nextPage());
     _display.hibernate();
 
@@ -248,7 +250,8 @@ void QuestionManager::updateDisplay()
       drawQuestionWithBattery(getQuestionText(_currentIndex), currentCategory);
       _uiRenderer.drawParrotWithCutout();
       _uiRenderer.drawCategoryBanner(currentCategory);
-      _uiRenderer.drawCategoryIconInCircle();
+      uint8_t categoryIndex = getQuestionCategoryEnum(_currentIndex);
+      _uiRenderer.drawCategoryIconInCircle(categoryIndex);
     } while (_display.nextPage());
     _display.hibernate();
 
@@ -270,7 +273,8 @@ void QuestionManager::updateDisplay()
       drawQuestionWithBattery(getQuestionText(_currentIndex), currentCategory);
       _uiRenderer.drawParrotWithCutout();
       _uiRenderer.drawCategoryBanner(currentCategory);
-      _uiRenderer.drawCategoryIconInCircle();
+      uint8_t categoryIndex = getQuestionCategoryEnum(_currentIndex);
+      _uiRenderer.drawCategoryIconInCircle(categoryIndex);
     } while (_display.nextPage());
     _display.hibernate();
 
