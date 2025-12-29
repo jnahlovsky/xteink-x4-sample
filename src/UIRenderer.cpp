@@ -4,6 +4,7 @@
 #include "Lexend_Bold24pt7b.h"
 #include "Lexend_Light40pt7b.h"
 #include "Utf8GfxHelper.h"
+#include "parrot.h"
 
 UIRenderer::UIRenderer(GxEPD2_BW<GxEPD2_426_GDEQ0426T82, GxEPD2_426_GDEQ0426T82::HEIGHT> &display)
     : _display(display)
@@ -17,6 +18,37 @@ void UIRenderer::drawBorder()
   {
     _display.drawRoundRect(50 + i, 50 + i, 700 - i * 2, 320 - i * 2, 20, GxEPD_BLACK);
   }
+}
+
+void UIRenderer::drawCardNumber(int currentCard, int totalCards)
+{
+  // Draw card number in top-left corner, aligned with battery on right
+  // Battery is 20px from right edge, so card number is 20px from left edge
+  // Same Y position as battery (baseline at Y=30)
+  char cardText[16];
+  snprintf(cardText, sizeof(cardText), "%03d/%03d", currentCard + 1, totalCards);
+
+  _display.setFont(&Lexend_Bold18pt7b);
+  _display.setCursor(20, 30);
+  _display.setTextColor(GxEPD_BLACK);
+  _display.print(cardText);
+}
+
+void UIRenderer::drawParrotWithCutout()
+{
+  // Parrot logo position: 64px from left, 37px from bottom
+  // Bottom = 480px, so Y = 480 - 37 - 140 = 303
+  const int PARROT_X = 64;
+  const int PARROT_Y = 303;
+  const int PARROT_W = 140;
+  const int PARROT_H = 140;
+
+  // Step 1: Erase border area exactly where parrot will be (no padding)
+  // This removes the border line without creating a visible gap
+  _display.fillRect(PARROT_X, PARROT_Y, PARROT_W, PARROT_H, GxEPD_WHITE);
+
+  // Step 2: Draw actual parrot bitmap (inverted to correct colors)
+  _display.drawInvertedBitmap(PARROT_X, PARROT_Y, parrot, PARROT_W, PARROT_H, GxEPD_BLACK);
 }
 
 void UIRenderer::drawBatteryIcon(int x, int y, int percentage)
@@ -80,9 +112,53 @@ void UIRenderer::drawQuestionText(const char *text)
 
 void UIRenderer::drawCategoryBanner(const char *category)
 {
-  // Draw category banner at bottom (inverted colors)
-  _display.fillRoundRect(250, 400, 300, 50, 10, GxEPD_BLACK);
-  drawUtf8StringCentered(_display, &Lexend_Bold24pt7b, category, 400, 435, GxEPD_WHITE);
+  // Draw category banner overlaying the border bottom
+  // Banner: 400x80px, 60px from bottom
+  // Circle center at 150px from right (X=650), banner right edge aligned with circle
+  // Display height = 480px, so Y = 480 - 60 - 80 = 340
+  const int BANNER_X = 250; // Right edge at 650 (150px from right)
+  const int BANNER_Y = 340;
+  const int BANNER_WIDTH = 400;
+  const int BANNER_HEIGHT = 80;
+  const int BANNER_RADIUS = 40; // Fully rounded corners
+
+  _display.fillRoundRect(BANNER_X, BANNER_Y, BANNER_WIDTH, BANNER_HEIGHT, BANNER_RADIUS, GxEPD_BLACK);
+
+  // Center text vertically and horizontally in banner
+  // Banner center X = 250 + 400/2 = 450
+  // Text baseline Y = 340 + 80/2 + font_offset
+  drawUtf8StringCentered(_display, &Lexend_Bold24pt7b, category, 450, 390, GxEPD_WHITE);
+}
+
+void UIRenderer::drawCategoryIconInCircle()
+{
+  // Draw category icon in white circle aligned with right side of banner
+  // Circle center at 150px from right side (800 - 150 = 650)
+  // Banner is at (250, 340) with width 400, so right edge is at X=650
+  // Circle: 120x120px (radius 60), center 100px from bottom (Y=380)
+  // Circle center X aligned with banner right edge (overlaying it)
+  const int BANNER_RIGHT_X = 250 + 400; // = 650 (150px from right)
+  const int CIRCLE_CENTER_X = BANNER_RIGHT_X;
+  const int CIRCLE_CENTER_Y = 480 - 100; // 100px from bottom = 380
+  const int CIRCLE_RADIUS = 60;          // 120px diameter
+  const int BORDER_THICKNESS = 5;        // Same as main border
+
+  // Draw white filled circle with thick black border (5px)
+  _display.fillCircle(CIRCLE_CENTER_X, CIRCLE_CENTER_Y, CIRCLE_RADIUS, GxEPD_WHITE);
+  for (int i = 0; i < BORDER_THICKNESS; i++)
+  {
+    _display.drawCircle(CIRCLE_CENTER_X, CIRCLE_CENTER_Y, CIRCLE_RADIUS - i, GxEPD_BLACK);
+  }
+
+  // Draw placeholder icon (rectangle with X)
+  // 84x84px - maximum square that fits inside 120px diameter circle
+  const int ICON_SIZE = 84;
+  const int ICON_X = CIRCLE_CENTER_X - ICON_SIZE / 2;
+  const int ICON_Y = CIRCLE_CENTER_Y - ICON_SIZE / 2;
+
+  _display.drawRect(ICON_X, ICON_Y, ICON_SIZE, ICON_SIZE, GxEPD_BLACK);
+  _display.drawLine(ICON_X, ICON_Y, ICON_X + ICON_SIZE, ICON_Y + ICON_SIZE, GxEPD_BLACK);
+  _display.drawLine(ICON_X + ICON_SIZE, ICON_Y, ICON_X, ICON_Y + ICON_SIZE, GxEPD_BLACK);
 }
 
 void UIRenderer::updateBatteryDisplay(int percentage, bool isCharging)

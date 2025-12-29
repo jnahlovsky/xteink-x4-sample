@@ -15,8 +15,17 @@ public:
   // Draw question text centered in the display area
   void drawQuestionText(const char *text);
 
-  // Draw category banner at bottom
+  // Draw card number (top-left corner)
+  void drawCardNumber(int currentCard, int totalCards);
+
+  // Draw parrot logo with cutout effect (bottom-left)
+  void drawParrotWithCutout();
+
+  // Draw category banner at bottom (overlay on border)
   void drawCategoryBanner(const char *category);
+
+  // Draw category icon in circle (right side of banner)
+  void drawCategoryIconInCircle();
 
   // Draw battery icon at specified position
   void drawBatteryIcon(int x, int y, int percentage);

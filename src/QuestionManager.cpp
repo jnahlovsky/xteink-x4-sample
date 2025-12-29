@@ -39,11 +39,26 @@ void QuestionManager::displayInitialQuestion()
   do
   {
     _display.fillScreen(GxEPD_WHITE);
+
+    // Layer 1: Border
     _uiRenderer.drawBorder();
+
+    // Layer 2: Card number (top-left)
+    _uiRenderer.drawCardNumber(_currentIndex, getQuestionCount());
+
+    // Layer 3: Question text (center)
     _uiRenderer.drawQuestionText(questionText);
+
+    // Layer 4: Parrot with cutout effect (bottom-left)
+    _uiRenderer.drawParrotWithCutout();
+
+    // Layer 5: Category banner overlay (bottom, over border)
     _uiRenderer.drawCategoryBanner(categoryText);
 
-    // Draw battery with percentage if charging
+    // Layer 6: Category icon in circle (right side of banner)
+    _uiRenderer.drawCategoryIconInCircle();
+
+    // Layer 7: Battery (top-right)
     int batteryPercent = _battery.readPercentage();
     bool isCharging = digitalRead(UART0_RXD) == HIGH;
 
@@ -193,8 +208,24 @@ void QuestionManager::updateDisplay()
     do
     {
       _display.fillScreen(GxEPD_WHITE);
+
+      // Layer 1: Border
       _uiRenderer.drawBorder();
+
+      // Layer 2: Card number
+      _uiRenderer.drawCardNumber(_currentIndex, getQuestionCount());
+
+      // Layer 3-7: Question + battery
       drawQuestionWithBattery(getQuestionText(_currentIndex), currentCategory);
+
+      // Layer 4: Parrot with cutout
+      _uiRenderer.drawParrotWithCutout();
+
+      // Layer 5: Category banner overlay
+      _uiRenderer.drawCategoryBanner(currentCategory);
+
+      // Layer 6: Category icon
+      _uiRenderer.drawCategoryIconInCircle();
     } while (_display.nextPage());
     _display.hibernate();
 
@@ -205,13 +236,17 @@ void QuestionManager::updateDisplay()
     // Category changed - refresh both question and banner
     Serial.println("Partial refresh (dual-region): question + banner + battery");
 
-    _display.setPartialWindow(60, 60, 690, 395);
+    _display.setPartialWindow(10, 10, 740, 445);
     _display.firstPage();
     do
     {
       _display.fillScreen(GxEPD_WHITE);
       _uiRenderer.drawBorder();
+      _uiRenderer.drawCardNumber(_currentIndex, getQuestionCount());
       drawQuestionWithBattery(getQuestionText(_currentIndex), currentCategory);
+      _uiRenderer.drawParrotWithCutout();
+      _uiRenderer.drawCategoryBanner(currentCategory);
+      _uiRenderer.drawCategoryIconInCircle();
     } while (_display.nextPage());
     _display.hibernate();
 
@@ -220,15 +255,20 @@ void QuestionManager::updateDisplay()
   }
   else
   {
-    // Same category - only refresh question area
-    Serial.println("Partial refresh (single-region): question only");
+    // Same category - refresh question area + bottom elements
+    Serial.println("Partial refresh (single-region): question + bottom elements");
 
-    _display.setPartialWindow(60, 60, 675, 295);
+    _display.setPartialWindow(10, 10, 740, 445);
     _display.firstPage();
     do
     {
       _display.fillScreen(GxEPD_WHITE);
+      _uiRenderer.drawBorder();
+      _uiRenderer.drawCardNumber(_currentIndex, getQuestionCount());
       _uiRenderer.drawQuestionText(getQuestionText(_currentIndex));
+      _uiRenderer.drawParrotWithCutout();
+      _uiRenderer.drawCategoryBanner(currentCategory);
+      _uiRenderer.drawCategoryIconInCircle();
     } while (_display.nextPage());
     _display.hibernate();
 
