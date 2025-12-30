@@ -47,6 +47,11 @@ void NavigationController::processInput()
       break;
 
     case CONFIRM:
+      _questionManager.nextCategory();
+      needsRedraw = true;
+      break;
+
+    case BACK:
       _questionManager.randomQuestion();
       needsRedraw = true;
       break;
